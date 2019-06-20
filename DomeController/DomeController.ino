@@ -29,6 +29,7 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 #include <EEPROM.h>
 #include <avr/wdt.h>
 #include <SoftwareSerial.h>
+#include "MonsterMotorShield.h"
 #include "serial_command.h"
 
 
@@ -43,6 +44,11 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 #define MOTOR_CW 8      // Move motor clockwise
 #define MOTOR_CCW 9     // Move motor counterclockwise
 #define HALL_PROBE 10   // Home probe
+
+#define LED_ERR  13     // error LED
+#define BUTTONS  A4     // analog input for reading the buttons
+#define VBAT_PIN A5     // battery voltage reading
+#define BUTTON_REPS 80  // Number of ADC readings required to detect a pressed button
 
 // Message Destination
 #define TO_MAXDOME  0x00
@@ -134,6 +140,20 @@ uint16_t ticks_per_turn = 360;  // Encoder ticks per dome revolution
 AzimuthStatus state = ST_IDLE;
 AzimuthEvent az_event = EVT_NONE;
 
+// Detect a pressed button by reading an analog input.
+// Every button puts a different voltage at the input.
+int readButton()
+{
+    int buttonLimits[] = {92, 303, 518, 820};
+    int val = analogRead(BUTTONS);
+
+    for (int i = 0; i < 4; i++) {
+        if (val < buttonLimits[i]) {
+            return i + 1;
+        }
+    }
+    return 0;
+}
 
 // Convert two bytes to a uint16_t value (big endian)
 uint16_t bytesToInt(uint8_t *data) {
