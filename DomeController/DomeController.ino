@@ -40,9 +40,10 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 #define HC12_TX 5       // Transmit Pin on HC12
 #define ENCODER1 2      // Azimuth encoder
 #define ENCODER2 3      // Azimuth encoder
-#define MOTOR_JOG 7     // Motor jog mode (low speed)
-#define MOTOR_CW 8      // Move motor clockwise
-#define MOTOR_CCW 9     // Move motor counterclockwise
+#define ENCODER_TICKS 221
+// #define MOTOR_JOG 7     // Motor jog mode (low speed)
+// #define MOTOR_CW 8      // Move motor clockwise
+// #define MOTOR_CCW 9     // Move motor counterclockwise
 #define HALL_PROBE 10   // Home probe
 
 #define LED_ERR  13     // error LED
@@ -136,7 +137,7 @@ uint16_t park_pos = 0;          // Parking position
 uint16_t current_pos = 0;       // Current dome position
 uint16_t target_pos = 0;        // Target dome position
 uint16_t home_pos = 0;          // Home position
-uint16_t ticks_per_turn = 360;  // Encoder ticks per dome revolution
+uint16_t ticks_per_turn = ENCODER_TICKS;  // Encoder ticks per dome revolution
 AzimuthStatus state = ST_IDLE;
 AzimuthEvent az_event = EVT_NONE;
 
@@ -531,6 +532,33 @@ void setup()
 
 void loop()
 {
+    int btn = readButton();
+    static int btn_prev = 0;
+    static int btn_count = 0;
+
+    if (btn && (btn == btn_prev))
+        btn_count++;
+    else
+        btn_count = 0;
+    btn_prev = btn;
+
+    if (btn_count == BUTTON_REPS) {
+        switch(btn) {
+        case BTN_A_OPEN:
+            shutter.open();
+            break;
+        case BTN_A_CLOSE:
+            shutter.close();
+            break;
+        // case BTN_B_OPEN:
+        //     flap.open();
+        //     break;
+        // case BTN_B_CLOSE:
+        //     flap.close();
+        //     break;
+        }
+    }
+    
     sCmd.readSerial();
     updateAzimuthFSM();
     wdt_reset();
