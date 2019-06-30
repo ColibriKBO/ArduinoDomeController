@@ -30,22 +30,33 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 #include <avr/wdt.h>
 #include <SoftwareSerial.h>
 #include "MonsterMotorShield.h"
+#include "controller.h"
 #include "serial_command.h"
 
+// Monster Motor Shield Pinout
+// Pin  Description
+// ---  ---------------------------
+// VCC  Power supply
+// GND  Ground
+// A0   Enable - Motor 1
+// A1   Enable - Motor 2
+// A2   Current Sensor - Motor 1
+// A3   Current Sensor - Motor 2
+// D4   Clockwise - Motor 2
+// D5   PWM - Motor 1
+// D6   PWM - Motor 2
+// D7   Clockwise - Motor 1
+// D8   Counterclockwise - Motor 1
+// D9   Counterclockwise - Motor 2
 
 #define BAUDRATE 19200
 
 // pin definitions
-#define HC12_RX 4       // Recieve Pin on HC12
-#define HC12_TX 5       // Transmit Pin on HC12
-#define ENCODER1 2      // Azimuth encoder
-#define ENCODER2 3      // Azimuth encoder
-#define ENCODER_TICKS 221
-// #define MOTOR_JOG 7     // Motor jog mode (low speed)
-// #define MOTOR_CW 8      // Move motor clockwise
-// #define MOTOR_CCW 9     // Move motor counterclockwise
+#define HC12_RX 2       // Recieve Pin on HC12 (was 4)
+#define HC12_TX 3       // Transmit Pin on HC12 (was 5)
 #define HALL_PROBE 10   // Home probe
-
+#define ENCODER1 11     // Azimuth encoder (was 2)
+#define ENCODER2 12     // Azimuth encoder (was 3)
 #define LED_ERR  13     // error LED
 #define BUTTONS  A4     // analog input for reading the buttons
 #define VBAT_PIN A5     // battery voltage reading
@@ -59,6 +70,8 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 #define VBAT_OFFSET 10.55
 
 // Commands
+#define DIR_CW      0x01 // Clockwise movement
+#define DIR_CCW     0x02 // Counterclockwise movement
 #define ABORT_CMD   0x03 // Abort azimuth movement
 #define HOME_CMD    0x04 // Move until 'home' position is detected
 #define GOTO_CMD    0x05 // Go to azimuth position
@@ -76,12 +89,10 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 #define EXIT_SHUTTER            0x04 // Command sent to shutter on program exit
 #define ABORT_SHUTTER           0x07
 
-#define DIR_CW  0x01
-#define DIR_CCW 0x02
-
 #define AZ_TOLERANCE    4       // Azimuth target tolerance in encoder ticks
 #define AZ_SLOW_RANGE   16      //
 #define AZ_TIMEOUT      30000   // Azimuth movement timeout (in ms)
+#define ENCODER_TICKS   221     // Number of encoder ticks in one dome rotation
 
 // EEPROM addresses
 #define ADDR_PARK_POS           0
@@ -177,7 +188,7 @@ uint16_t eepromReadUint16(int address)
     return (value1 & 0xff) | ((value2 << 8) & 0xff00);
 }
 
-// Read a uint16_t value from EEPROM (little endian)
+// Write a uint16_t value to EEPROM (little endian)
 void eepromWriteUint16(int address, uint16_t value)
 {
     uint8_t value1 = value & 0xff;
@@ -550,12 +561,6 @@ void loop()
         case BTN_A_CLOSE:
             shutter.close();
             break;
-        // case BTN_B_OPEN:
-        //     flap.open();
-        //     break;
-        // case BTN_B_CLOSE:
-        //     flap.close();
-        //     break;
         }
     }
     
