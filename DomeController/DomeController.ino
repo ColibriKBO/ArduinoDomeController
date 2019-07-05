@@ -52,9 +52,9 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 #define BAUDRATE 19200
 
 // pin definitions
-#define HC12_RX 2       // Recieve Pin on HC12 (was 4)
-#define HC12_TX 3       // Transmit Pin on HC12 (was 5)
-#define HALL_PROBE 10   // Home probe
+#define HC12_RX   2     // Recieve Pin on HC12 (was 4)
+#define HC12_TX   3     // Transmit Pin on HC12 (was 5)
+#define SW_HOME  10     // Home probe
 #define ENCODER1 11     // Azimuth encoder (was 2)
 #define ENCODER2 12     // Azimuth encoder (was 3)
 #define LED_ERR  13     // error LED
@@ -68,6 +68,8 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 
 #define VBAT_FACTOR (5.0/1024.0)
 #define VBAT_OFFSET 10.55
+
+#define CONTROLLER_TIMEOUT 30000
 
 // Commands
 #define DIR_CW      0x01 // Clockwise movement
@@ -114,7 +116,7 @@ enum AzimuthStatus {
     ST_GOING,
     ST_GOING_SLOW,
     ST_HOMING,
-    ST_ERROR,
+    //ST_ERROR,
 };
 
 // MaxDome II azimuth status
@@ -138,6 +140,10 @@ enum ShutterStatus {
 
 
 SoftwareSerial HC12(HC12_TX, HC12_RX); // Create Software Serial Port
+
+Motor motorA(0);
+Controller controller(&motorA, SW_HOME, CONTROLLER_TIMEOUT);
+
 SerialCommand sCmd;
 
 bool park_on_shutter = false;
@@ -165,6 +171,25 @@ int readButton()
         }
     }
     return 0;
+}
+
+// Return dome status
+State domeStatus()
+{
+    State sst = controller.getState();
+
+    if (sst == ST_ERROR)
+        return ST_ERROR;
+    else if (sst == ST_CWING)
+        return ST_CWING;
+    else if (sst == ST_CCWING)
+        return ST_CCWING;
+    else if (sst == ST_HOMED)
+        return ST_HOMED;
+//    else if (sst == ST_NOTHOMED)
+//        return ST_NOTHOMED;
+
+    return ST_ABORTED;
 }
 
 // Convert two bytes to a uint16_t value (big endian)

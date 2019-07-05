@@ -34,6 +34,8 @@ void Controller::initState()
 {
     if (digitalRead(swHomed))
         state = ST_HOMED;
+    else if (!digitalRead(swHomed))
+        state = ST_NOTHOMED
     else
         state = ST_ABORTED;
 }
@@ -58,26 +60,26 @@ void Controller::update()
     }
 
     switch (state) {
-    case ST_CCW:
+    case ST_NOTHOMED:
         if (action == DO_CW) {
             t0 = millis();
-            state = ST_CW;
+            state = ST_CWING;
         }
         break;
-    case ST_CW:
+    case ST_HOMED:
         if (action == DO_CCW) {
             t0 = millis();
-            state = ST_CCW;
+            state = ST_CCWING;
         }
         break;
     case ST_ABORTED:
     case ST_ERROR:
         if (action == DO_CW) {
             t0 = millis();
-            state = ST_CW;
+            state = ST_CWING;
         } else if (action == DO_CCW) {
             t0 = millis();
-            state = ST_CCW;
+            state = ST_CCWING;
         }
         break;
     case ST_CWING:
@@ -86,7 +88,10 @@ void Controller::update()
         else
             motor->run(MOTOR_CW, SPEED);
 
-        if (action == DO_ABORT || action == DO_CCW) {
+        if (!digitalRead(swHomed)){
+            state = ST_NOTHOMED;
+            motor->brake();
+        } else if (action == DO_ABORT || action == DO_CCW) {
             state = ST_ABORTED;
             motor->brake();
         } else if (millis() - t0 > runTimeout) {

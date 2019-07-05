@@ -35,9 +35,6 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 #define LED_ERR  13     // error LED
 #define SW_A1    12     // shutter closed switch (NC)
 #define SW_A2    11     // shutter open switch (NO)
-// #define SW_B1    10     // flap closed switch (NC)
-// #define SW_B2    3      // flap open switch (NO)
-// #define SW_INTER 2      // shutter interference detection switch (NC)
 #define BUTTONS  A4     // analog input for reading the buttons
 #define VBAT_PIN A5     // battery voltage reading
 
@@ -46,34 +43,17 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // Timeouts in ms
 #define COMMAND_TIMEOUT 60000   // Max. time from last command
 #define SHUTTER_TIMEOUT 75000   // Max. time the shutter takes to open/close
-// #define FLAP_TIMEOUT 15000      // Max. time the flap takes to open/close
 
 enum {
     BTN_NONE,
     BTN_A_OPEN,
     BTN_A_CLOSE,
-    // BTN_B_OPEN,
-    // BTN_B_CLOSE,
 };
 
-// // Detect mechanical interfence between the two shutters
-// bool checkFlapInterference(State st)
-// {
-//     return (st == ST_OPENING) && digitalRead(SW_INTER);
-// }
-
-// // Detect mechanical interfence between the two shutters
-// bool checkShutterInterference(State st)
-// {
-//     return (st == ST_CLOSING) && digitalRead(SW_INTER) && !digitalRead(SW_B1);
-// }
-
-
 Motor motorA(0);
-// Motor motorB(1);
-Shutter shutter(&motorA, SW_A1, SW_A2, SHUTTER_TIMEOUT, checkShutterInterference);
-// Shutter flap(&motorB, SW_B1, SW_B2, FLAP_TIMEOUT, checkFlapInterference);
+Shutter shutter(&motorA, SW_A1, SW_A2, SHUTTER_TIMEOUT);
 SerialCommand sCmd;
+
 unsigned long lastCmdTime = 0;
 
 // Detect a pressed button by reading an analog input.
@@ -95,7 +75,6 @@ int readButton()
 State domeStatus()
 {
     State sst = shutter.getState();
-    // State fst = flap.getState();
 
     if (sst == ST_ERROR)
         return ST_ERROR;
@@ -116,32 +95,22 @@ void cmdOpenShutter() {
     shutter.open();
 }
 
-// void cmdOpenBoth()
-// {
-//     lastCmdTime = millis();
-//     shutter.open();
-//     flap.open();
-// }
-
 void cmdClose()
 {
     lastCmdTime = millis();
     shutter.close();
-    // flap.close();
 }
 
 void cmdAbort()
 {
     lastCmdTime = millis();
     shutter.abort();
-    // flap.abort();
 }
 
 void cmdExit()
 {
     lastCmdTime = 0;
     shutter.close();
-    // flap.close();
 }
 
 void cmdStatus()
@@ -168,7 +137,6 @@ void setup()
     pinMode(LED_ERR, OUTPUT);
 
     // Map serial commands to functions
-    // sCmd.addCommand("open", cmdOpenBoth);
     sCmd.addCommand("open", cmdOpenShutter);
     sCmd.addCommand("close", cmdClose);
     sCmd.addCommand("abort", cmdAbort);
@@ -204,12 +172,6 @@ void loop()
         case BTN_A_CLOSE:
             shutter.close();
             break;
-        // case BTN_B_OPEN:
-        //     flap.open();
-        //     break;
-        // case BTN_B_CLOSE:
-        //     flap.close();
-        //     break;
         }
     }
 
@@ -218,7 +180,6 @@ void loop()
         if (domeStatus() != ST_CLOSED) {
             lastCmdTime = 0;
             shutter.close();
-            // flap.close();
         }
     }
 
@@ -226,7 +187,6 @@ void loop()
     digitalWrite(LED_ERR, err);
 
     shutter.update();
-    // flap.update();
     sCmd.readSerial();
 
     wdt_reset();

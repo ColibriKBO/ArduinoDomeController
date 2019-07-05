@@ -33,11 +33,11 @@ enum Action {
 // typedef bool (*interFn)(State st);
 
 
-class controller {
+class Controller {
 public:
-    controller(Motor *motor, int homedSwitch, unsigned long timeout);
-    void open();
-    void close();
+    Controller(Motor *motor, int homedSwitch, unsigned long timeout);
+    void cw();
+    void ccw();
     void abort();
     void update();
     State getState();
