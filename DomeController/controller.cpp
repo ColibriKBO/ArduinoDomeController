@@ -35,7 +35,7 @@ void Controller::initState()
     if (digitalRead(swHomed))
         state = ST_HOMED;
     else if (!digitalRead(swHomed))
-        state = ST_NOTHOMED
+        state = ST_NOTHOMED;
     else
         state = ST_ABORTED;
 }
@@ -83,10 +83,7 @@ void Controller::update()
         }
         break;
     case ST_CWING:
-        if (interference(state))
-            motor->brake();
-        else
-            motor->run(MOTOR_CW, SPEED);
+        motor->run(MOTOR_CW, SPEED);
 
         if (!digitalRead(swHomed)){
             state = ST_NOTHOMED;
@@ -100,10 +97,7 @@ void Controller::update()
         }
         break;
     case ST_CCWING:
-        if (interference(state))
-            motor->brake();
-        else
-            motor->run(MOTOR_CCW, SPEED);
+        motor->run(MOTOR_CCW, SPEED);
 
         if (digitalRead(swHomed)) {
             state = ST_CCW;

@@ -1,11 +1,13 @@
 /*******************************************************************************
 ArduinoDomeController
 Azimuth control of an astronomical dome using Arduino
+Adapted for Monster motor shield and Exploradome EDII by Michael Mazur
 
 
 The MIT License
 
 Copyright (C) 2017 Juan Menendez <juanmb@gmail.com>
+Copyright (C) 2019 Michael Mazur <mjmazur@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -93,7 +95,7 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 
 #define AZ_TOLERANCE    4       // Azimuth target tolerance in encoder ticks
 #define AZ_SLOW_RANGE   16      //
-#define AZ_TIMEOUT      30000   // Azimuth movement timeout (in ms)
+#define AZ_TIMEOUT      60000   // Azimuth movement timeout (in ms)
 #define ENCODER_TICKS   221     // Number of encoder ticks in one dome rotation
 
 // EEPROM addresses
@@ -101,8 +103,11 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 #define ADDR_TICKS_PER_TURN     2
 #define ADDR_PARK_ON_SHUTTER    4
 
-
-enum MotorSpeed { MOTOR_STOP, MOTOR_SLOW, MOTOR_FAST };
+enum {
+    BTN_NONE,
+    BTN_A_CW,
+    BTN_A_CCW
+};
 
 enum AzimuthEvent {
     EVT_NONE,
@@ -116,7 +121,7 @@ enum AzimuthStatus {
     ST_GOING,
     ST_GOING_SLOW,
     ST_HOMING,
-    //ST_ERROR,
+    // ST_ERROR,
 };
 
 // MaxDome II azimuth status
@@ -138,13 +143,14 @@ enum ShutterStatus {
     SS_ERROR
 };
 
-
 SoftwareSerial HC12(HC12_TX, HC12_RX); // Create Software Serial Port
 
 Motor motorA(0);
 Controller controller(&motorA, SW_HOME, CONTROLLER_TIMEOUT);
 
 SerialCommand sCmd;
+
+unsigned long lastCmdTime = 0;
 
 bool park_on_shutter = false;
 bool home_reached = false;
@@ -244,23 +250,26 @@ uint16_t getDistance(uint16_t current, uint16_t target)
     return diff;
 }
 
-inline void moveAzimuth(uint8_t dir)
+ inline void moveAzimuth(uint8_t dir)
+ {
+//     digitalWrite(MOTOR_CW, dir == DIR_CW);
+//     digitalWrite(MOTOR_CCW, dir != DIR_CW);
+    lastCmdTime = millis();
+    controller.abort();
+ }
+
+inline void cmdAbort()
 {
-    digitalWrite(MOTOR_CW, dir == DIR_CW);
-    digitalWrite(MOTOR_CCW, dir != DIR_CW);
+
+    lastCmdTime = millis();
+    controller.abort();
 }
 
-inline void stopAzimuth()
-{
-    digitalWrite(MOTOR_JOG, LOW);
-    digitalWrite(MOTOR_CW, LOW);
-    digitalWrite(MOTOR_CCW, LOW);
-}
-
-inline void setJog(bool enable)
-{
-    digitalWrite(MOTOR_JOG, enable);
-}
+ // inline void setJog(bool enable)
+ // {
+ //    lastCmdTime = millis();
+ //    controller.abort();
+ // }
 
 float getShutterVBat() {
     int adc=0;
@@ -445,40 +454,29 @@ void updateAzimuthFSM()
     case ST_HOMING:
         if (az_event == EVT_ABORT) {
             parking = false;
-            stopAzimuth();
+            cmdAbort();
             state = ST_IDLE;
         } else if (home_reached) {
-            stopAzimuth();
+            cmdAbort();
             state = ST_IDLE;
             home_reached = false;
         } else if (millis() - t0 > AZ_TIMEOUT) {
-            stopAzimuth();
-            state = ST_ERROR;
+            cmdAbort();
+            // state = ST_ERROR;
         }
         break;
 
     case ST_GOING:
         if (az_event == EVT_ABORT) {
             parking = false;
-            stopAzimuth();
+            cmdAbort();
             state = ST_IDLE;
-        } else if (getDistance(current_pos, target_pos) < AZ_SLOW_RANGE) {
-            moveAzimuth(current_dir);
-            setJog(true);
-            state = ST_GOING_SLOW;
-        } else if (millis() - t0 > AZ_TIMEOUT) {
-            stopAzimuth();
-            state = ST_ERROR;
-        }
-        break;
-
-    case ST_GOING_SLOW:
-        if (az_event == EVT_ABORT) {
-            parking = false;
-            stopAzimuth();
-            state = ST_IDLE;
+        // } else if (getDistance(current_pos, target_pos) < AZ_SLOW_RANGE) {
+        //     moveAzimuth(current_dir);
+        //     setJog(true);
+        //     state = ST_GOING_SLOW;
         } else if (getDistance(current_pos, target_pos) < AZ_TOLERANCE) {
-            stopAzimuth();
+            cmdAbort();
 
             // close shutter after parking
             if (parking) {
@@ -488,10 +486,31 @@ void updateAzimuthFSM()
 
             state = ST_IDLE;
         } else if (millis() - t0 > AZ_TIMEOUT) {
-            stopAzimuth();
-            state = ST_ERROR;
+            cmdAbort();
+            // state = ST_ERROR;
         }
         break;
+
+//     case ST_GOING_SLOW:
+//         if (az_event == EVT_ABORT) {
+//             parking = false;
+//             cmdAbort();
+//             state = ST_IDLE;
+//         } else if (getDistance(current_pos, target_pos) < AZ_TOLERANCE) {
+//             cmdAbort();
+
+//             // close shutter after parking
+//             if (parking) {
+//                 parking = false;
+//                 HC12.println("close");
+//             }
+
+//             state = ST_IDLE;
+//         } else if (millis() - t0 > AZ_TIMEOUT) {
+//             cmdAbort();
+// //            state = ST_ERROR;
+//         }
+//         break;
 
     case ST_ERROR:
     case ST_IDLE:
@@ -525,7 +544,7 @@ void encoderISR()
     }
 
     // store detected home position
-    if (!digitalRead(HALL_PROBE)) {
+    if (!digitalRead(SW_HOME)) {
         if (state == ST_HOMING) {
             home_pos = 0;
             current_pos = 0;
@@ -550,10 +569,10 @@ void setup()
     sCmd.addCommand(ACK_CMD, 2, cmdAck);
     sCmd.addCommand(VBAT_CMD, 2, cmdVBat);
 
-    pinMode(LED_BUILTIN, OUTPUT);
-    pinMode(MOTOR_JOG, OUTPUT);
-    pinMode(MOTOR_CW, OUTPUT);
-    pinMode(MOTOR_CCW, OUTPUT);
+//    pinMode(LED_BUILTIN, OUTPUT);
+//    pinMode(MOTOR_JOG, OUTPUT);
+//    pinMode(MOTOR_CW, OUTPUT);
+//    pinMode(MOTOR_CCW, OUTPUT);
 
     attachInterrupt(digitalPinToInterrupt(ENCODER1), encoderISR, CHANGE);
 
@@ -580,16 +599,22 @@ void loop()
 
     if (btn_count == BUTTON_REPS) {
         switch(btn) {
-        case BTN_A_OPEN:
-            shutter.open();
+        case BTN_A_CW:
+            controller.cw();
             break;
-        case BTN_A_CLOSE:
-            shutter.close();
+        case BTN_A_CCW:
+            controller.ccw();
             break;
         }
     }
     
+    int err = (controller.getState() == ST_ERROR);
+    digitalWrite(LED_ERR, err);
+
+    controller.update();
     sCmd.readSerial();
+
     updateAzimuthFSM();
+    
     wdt_reset();
 }

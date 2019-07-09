@@ -14,8 +14,10 @@
 // Lid states
 enum State {
     ST_HOMED,
-    ST_CWING,
+    ST_NOTHOMED,
     ST_CW,
+    ST_CWING,
+    ST_CCW,
     ST_CCWING,
     ST_ABORTED,
     ST_ERROR,

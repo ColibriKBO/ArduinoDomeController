@@ -91,6 +91,8 @@ void Shutter::update()
         // else
         //     motor->run(MOTOR_OPEN, SPEED);
 
+        motor->run(MOTOR_OPEN, SPEED);
+
         if (!digitalRead(swOpen)) {
             state = ST_OPEN;
             motor->brake();
@@ -107,6 +109,8 @@ void Shutter::update()
         //     motor->brake();
         // else
         //     motor->run(MOTOR_CLOSE, SPEED);
+
+        motor->run(MOTOR_CLOSE, SPEED);
 
         if (digitalRead(swClosed)) {
             state = ST_CLOSED;
