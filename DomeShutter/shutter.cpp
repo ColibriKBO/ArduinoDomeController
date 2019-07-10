@@ -19,7 +19,6 @@
 // motor: pointer to an instance of Motor
 // sw1: Limit switch (closed)
 // sw2: Limit switch (fully open)
-// swInt: Interference switch
 Shutter::Shutter(Motor *motorPtr, int closedSwitch, int openSwitch,
         unsigned long timeout)
 {
@@ -27,7 +26,6 @@ Shutter::Shutter(Motor *motorPtr, int closedSwitch, int openSwitch,
     swClosed = closedSwitch;    // normally closed (1 if shutter is closed)
     swOpen = openSwitch;        // normally open (0 if shutter is fully open)
     runTimeout = timeout;
-//    interference = checkInterference;
     nextAction = DO_NONE;
     initState();
 }
@@ -86,13 +84,7 @@ void Shutter::update()
         }
         break;
     case ST_OPENING:
-        // if (interference(state))
-        //     motor->brake();
-        // else
-        //     motor->run(MOTOR_OPEN, SPEED);
-
         motor->run(MOTOR_OPEN, SPEED);
-
         if (!digitalRead(swOpen)) {
             state = ST_OPEN;
             motor->brake();
@@ -105,13 +97,7 @@ void Shutter::update()
         }
         break;
     case ST_CLOSING:
-        // if (interference(state))
-        //     motor->brake();
-        // else
-        //     motor->run(MOTOR_CLOSE, SPEED);
-
         motor->run(MOTOR_CLOSE, SPEED);
-
         if (digitalRead(swClosed)) {
             state = ST_CLOSED;
             motor->brake();

@@ -17,13 +17,12 @@
 
 // Controller constructor.
 // motor: pointer to an instance of Motor
-// sw1: Limit switch (closed)
-// sw2: Limit switch (fully open)
-// swInt: Interference switch
+// sw1: Home sensor (Hall Effect)
+
 Controller::Controller(Motor *motorPtr, int homedSwitch, unsigned long timeout)
 {
     motor = motorPtr;
-    swHomed = homedSwitch;    // normally closed (1 if shutter is closed)
+    swHomed = homedSwitch;    // normally open - should have a value of 1 when homed
     runTimeout = timeout;
     nextAction = DO_NONE;
     initState();
@@ -64,10 +63,16 @@ void Controller::update()
         if (action == DO_CW) {
             t0 = millis();
             state = ST_CWING;
+        } else if (action == DO_CCW) {
+            t0 = millis();
+            state = ST_CCWING;
         }
         break;
     case ST_HOMED:
         if (action == DO_CCW) {
+            t0 = millis();
+            state = ST_CCWING;
+        } else if (action == DO_CCW) {
             t0 = millis();
             state = ST_CCWING;
         }
@@ -84,11 +89,7 @@ void Controller::update()
         break;
     case ST_CWING:
         motor->run(MOTOR_CW, SPEED);
-
-        if (!digitalRead(swHomed)){
-            state = ST_NOTHOMED;
-            motor->brake();
-        } else if (action == DO_ABORT || action == DO_CCW) {
+        if (action == DO_ABORT || action == DO_CCW) {
             state = ST_ABORTED;
             motor->brake();
         } else if (millis() - t0 > runTimeout) {
@@ -98,11 +99,7 @@ void Controller::update()
         break;
     case ST_CCWING:
         motor->run(MOTOR_CCW, SPEED);
-
-        if (digitalRead(swHomed)) {
-            state = ST_CCW;
-            motor->brake();
-        } else if (action == DO_ABORT || action == DO_CW) {
+        if (action == DO_ABORT || action == DO_CW) {
             state = ST_ABORTED;
             motor->brake();
         } else if (millis() - t0 > runTimeout) {

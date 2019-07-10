@@ -1,11 +1,13 @@
 /*******************************************************************************
 ArduinoDomeShutter
 Shutter controller for an astronomical dome using Arduino
+Adapted for Exploradome EDII by Michael Mazur
 
 
 The MIT License
 
 Copyright (C) 2017 Juan Menendez <juanmb@gmail.com>
+Copyright (C) 2019 Michael Mazur <mjmazur@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -131,8 +133,8 @@ void cmdGetVBat()
 
 void setup()
 {
-    wdt_disable();
-    wdt_enable(WDTO_1S);
+    wdt_disable(); // Disable the watchdog timer
+    wdt_enable(WDTO_1S); // Enable the watchdog timer to fire after a 1S freeze/hang/stall/crash
 
     pinMode(LED_ERR, OUTPUT);
 

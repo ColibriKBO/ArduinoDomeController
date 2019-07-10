@@ -252,8 +252,11 @@ uint16_t getDistance(uint16_t current, uint16_t target)
 
  inline void moveAzimuth(uint8_t dir)
  {
-//     digitalWrite(MOTOR_CW, dir == DIR_CW);
-//     digitalWrite(MOTOR_CCW, dir != DIR_CW);
+    if dir == DIR_CW
+        controller.cw()
+    else if dir == DIR_CCW
+        controller.ccw();
+
     lastCmdTime = millis();
     controller.abort();
  }
@@ -556,23 +559,19 @@ void encoderISR()
 
 void setup()
 {
-    wdt_disable();
-    wdt_enable(WDTO_2S);
+    wdt_disable(); // Disable the watchdog timer
+    wdt_enable(WDTO_2S); // Enable the watchdog timer to fire after a 2S freeze/hang/stall/crash
 
-    sCmd.addCommand(ABORT_CMD, 2, cmdAbort);
-    sCmd.addCommand(HOME_CMD, 2, cmdHomeAzimuth);
-    sCmd.addCommand(GOTO_CMD, 5, cmdGotoAzimuth);
+    // Setup callbacks for serial commands
+    sCmd.addCommand(ABORT_CMD,   2, cmdAbort);
+    sCmd.addCommand(HOME_CMD,    2, cmdHomeAzimuth);
+    sCmd.addCommand(GOTO_CMD,    5, cmdGotoAzimuth);
     sCmd.addCommand(SHUTTER_CMD, 3, cmdShutterCommand);
-    sCmd.addCommand(STATUS_CMD, 2, cmdStatus);
+    sCmd.addCommand(STATUS_CMD,  2, cmdStatus);
     sCmd.addCommand(SETPARK_CMD, 5, cmdSetPark);
-    sCmd.addCommand(TICKS_CMD, 4, cmdSetTicks);
-    sCmd.addCommand(ACK_CMD, 2, cmdAck);
-    sCmd.addCommand(VBAT_CMD, 2, cmdVBat);
-
-//    pinMode(LED_BUILTIN, OUTPUT);
-//    pinMode(MOTOR_JOG, OUTPUT);
-//    pinMode(MOTOR_CW, OUTPUT);
-//    pinMode(MOTOR_CCW, OUTPUT);
+    sCmd.addCommand(TICKS_CMD,   4, cmdSetTicks);
+    sCmd.addCommand(ACK_CMD,     2, cmdAck);
+    sCmd.addCommand(VBAT_CMD,    2, cmdVBat);
 
     attachInterrupt(digitalPinToInterrupt(ENCODER1), encoderISR, CHANGE);
 

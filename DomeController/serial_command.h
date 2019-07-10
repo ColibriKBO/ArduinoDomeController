@@ -26,7 +26,6 @@ typedef struct commandCallback {
     cbFunction function;
 } commandCallback;
 
-
 class SerialCommand {
 public:
     SerialCommand();
