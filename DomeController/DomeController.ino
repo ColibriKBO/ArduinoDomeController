@@ -252,9 +252,9 @@ uint16_t getDistance(uint16_t current, uint16_t target)
 
  inline void moveAzimuth(uint8_t dir)
  {
-    if dir == DIR_CW
-        controller.cw()
-    else if dir == DIR_CCW
+    if (dir == DIR_CW)
+        controller.cw();
+    else if (dir == DIR_CCW)
         controller.ccw();
 
     lastCmdTime = millis();
