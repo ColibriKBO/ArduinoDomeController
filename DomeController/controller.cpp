@@ -40,8 +40,9 @@ void Controller::initState()
         state = ST_ABORTED;
 }
 
-
-void Controller::cw() { nextAction = DO_CW; }
+void Controller::cw() {
+  nextAction = DO_CW;
+  }
 void Controller::ccw() { nextAction = DO_CCW; }
 void Controller::abort() { nextAction = DO_ABORT; }
 
@@ -58,7 +59,6 @@ void Controller::update()
         action = nextAction;
         nextAction = DO_NONE;
     }
-
     switch (state) {
     case ST_NOTHOMED:
         if (action == DO_CW) {

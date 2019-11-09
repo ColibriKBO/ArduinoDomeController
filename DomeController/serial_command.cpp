@@ -44,7 +44,6 @@ void SerialCommand::readSerial()
 {
     while (Serial.available()) {
         char c = Serial.read();
-
         switch (bufPos) {
         case 0:
             // start byte

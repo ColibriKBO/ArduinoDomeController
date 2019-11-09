@@ -32,6 +32,7 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 #include <avr/wdt.h>
 #include <SoftwareSerial.h>
 #include "serial_command.h"
+//#include "SerialCommand.h"
 #include "MonsterMotorShield.h"
 #include "controller.h"
 
@@ -149,6 +150,8 @@ Motor motorA(0);
 Controller controller(&motorA, SW_HOME, CONTROLLER_TIMEOUT);
 
 SerialCommand sCmd;
+char *arg;
+int aNumber;
 
 unsigned long lastCmdTime = 0;
 
@@ -186,8 +189,10 @@ State domeStatus()
 
     if (sst == ST_ERROR)
         return ST_ERROR;
-    else if (sst == ST_CWING)
+    else if (sst == ST_CWING){
+        HC12.println("CWing");
         return ST_CWING;
+    }
     else if (sst == ST_CCWING)
         return ST_CCWING;
     else if (sst == ST_HOMED)
@@ -253,11 +258,13 @@ uint16_t getDistance(uint16_t current, uint16_t target)
  inline void moveAzimuth(uint8_t dir)
  {
     if (dir == DIR_CW){
+        HC12.println("CW");
         controller.cw();
     }
-    else if (dir == DIR_CCW)
+    else if (dir == DIR_CCW){
         controller.ccw();
-
+    }
+    
     lastCmdTime = millis();
     controller.abort();
  }
@@ -583,6 +590,8 @@ void setup()
 
     Serial.begin(19200);
     HC12.begin(9600);   // Open serial port to HC12
+
+    
 }
 
 
