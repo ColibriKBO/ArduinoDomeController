@@ -31,7 +31,7 @@ Motor::Motor(uint8_t n)
     stop();
 }
 
-void Motor::run(bool dir, int pwm)
+void Motor::run(bool dir, int pwm) // dir is 0 or 1
 {
     digitalWrite(inApin[_nmotor], dir);
     digitalWrite(inBpin[_nmotor], !dir);

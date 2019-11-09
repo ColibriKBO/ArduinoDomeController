@@ -31,9 +31,9 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 #include <EEPROM.h>
 #include <avr/wdt.h>
 #include <SoftwareSerial.h>
+#include "serial_command.h"
 #include "MonsterMotorShield.h"
 #include "controller.h"
-#include "serial_command.h"
 
 // Monster Motor Shield Pinout
 // Pin  Description
@@ -59,7 +59,7 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 #define SW_HOME  10     // Home probe
 #define ENCODER1 11     // Azimuth encoder (was 2)
 #define ENCODER2 12     // Azimuth encoder (was 3)
-#define LED_ERR  13     // error LED
+// #define LED_ERR  13     // error LED
 #define BUTTONS  A4     // analog input for reading the buttons
 #define VBAT_PIN A5     // battery voltage reading
 #define BUTTON_REPS 80  // Number of ADC readings required to detect a pressed button
@@ -156,7 +156,7 @@ bool park_on_shutter = false;
 bool home_reached = false;
 bool parking = false;
 uint8_t current_dir = DIR_CW;   // Current azimuth movement direction
-uint16_t park_pos = 0;          // Parking position
+uint16_t park_pos = 90;          // Parking position
 uint16_t current_pos = 0;       // Current dome position
 uint16_t target_pos = 0;        // Target dome position
 uint16_t home_pos = 0;          // Home position
@@ -252,8 +252,9 @@ uint16_t getDistance(uint16_t current, uint16_t target)
 
  inline void moveAzimuth(uint8_t dir)
  {
-    if (dir == DIR_CW)
+    if (dir == DIR_CW){
         controller.cw();
+    }
     else if (dir == DIR_CCW)
         controller.ccw();
 
@@ -261,9 +262,8 @@ uint16_t getDistance(uint16_t current, uint16_t target)
     controller.abort();
  }
 
-inline void cmdAbort()
+inline void stopAzimuth()
 {
-
     lastCmdTime = millis();
     controller.abort();
 }
@@ -457,14 +457,14 @@ void updateAzimuthFSM()
     case ST_HOMING:
         if (az_event == EVT_ABORT) {
             parking = false;
-            cmdAbort();
+            stopAzimuth();
             state = ST_IDLE;
         } else if (home_reached) {
-            cmdAbort();
+            stopAzimuth();
             state = ST_IDLE;
             home_reached = false;
         } else if (millis() - t0 > AZ_TIMEOUT) {
-            cmdAbort();
+            stopAzimuth();
             // state = ST_ERROR;
         }
         break;
@@ -472,14 +472,14 @@ void updateAzimuthFSM()
     case ST_GOING:
         if (az_event == EVT_ABORT) {
             parking = false;
-            cmdAbort();
+            stopAzimuth();
             state = ST_IDLE;
         // } else if (getDistance(current_pos, target_pos) < AZ_SLOW_RANGE) {
         //     moveAzimuth(current_dir);
         //     setJog(true);
         //     state = ST_GOING_SLOW;
         } else if (getDistance(current_pos, target_pos) < AZ_TOLERANCE) {
-            cmdAbort();
+            stopAzimuth();
 
             // close shutter after parking
             if (parking) {
@@ -489,7 +489,7 @@ void updateAzimuthFSM()
 
             state = ST_IDLE;
         } else if (millis() - t0 > AZ_TIMEOUT) {
-            cmdAbort();
+            stopAzimuth();
             // state = ST_ERROR;
         }
         break;
@@ -497,10 +497,10 @@ void updateAzimuthFSM()
 //     case ST_GOING_SLOW:
 //         if (az_event == EVT_ABORT) {
 //             parking = false;
-//             cmdAbort();
+//             stopAzimuth();
 //             state = ST_IDLE;
 //         } else if (getDistance(current_pos, target_pos) < AZ_TOLERANCE) {
-//             cmdAbort();
+//             stopAzimuth();
 
 //             // close shutter after parking
 //             if (parking) {
@@ -510,7 +510,7 @@ void updateAzimuthFSM()
 
 //             state = ST_IDLE;
 //         } else if (millis() - t0 > AZ_TIMEOUT) {
-//             cmdAbort();
+//             stopAzimuth();
 // //            state = ST_ERROR;
 //         }
 //         break;
@@ -573,6 +573,8 @@ void setup()
     sCmd.addCommand(ACK_CMD,     2, cmdAck);
     sCmd.addCommand(VBAT_CMD,    2, cmdVBat);
 
+    pinMode(LED_BUILTIN, OUTPUT);
+
     attachInterrupt(digitalPinToInterrupt(ENCODER1), encoderISR, CHANGE);
 
     park_pos = eepromReadUint16(ADDR_PARK_POS);
@@ -586,34 +588,38 @@ void setup()
 
 void loop()
 {
-    int btn = readButton();
-    static int btn_prev = 0;
-    static int btn_count = 0;
-
-    if (btn && (btn == btn_prev))
-        btn_count++;
-    else
-        btn_count = 0;
-    btn_prev = btn;
-
-    if (btn_count == BUTTON_REPS) {
-        switch(btn) {
-        case BTN_A_CW:
-            controller.cw();
-            break;
-        case BTN_A_CCW:
-            controller.ccw();
-            break;
-        }
-    }
-    
-    int err = (controller.getState() == ST_ERROR);
-    digitalWrite(LED_ERR, err);
+//    int btn = readButton();
+//    static int btn_prev = 0;
+//    static int btn_count = 0;
+//
+//    if (btn && (btn == btn_prev))
+//        btn_count++;
+//    else
+//        btn_count = 0;
+//    btn_prev = btn;
+//
+//    if (btn_count == BUTTON_REPS) {
+//        switch(btn) {
+//        case BTN_A_CW:
+//            controller.cw();
+//            break;
+//        case BTN_A_CCW:
+//            controller.ccw();
+//            break;
+//        }
+//    }
+//    
+//    int err = (controller.getState() == ST_ERROR);
+    // digitalWrite(LED_ERR, err);
+//    motorA.run(0,1023);
+//    delay(1000);
+//    motorA.run(1,1023);
+//    delay(1000);
+//    motorA.stop();
+//    delay(1000);
 
     controller.update();
     sCmd.readSerial();
-
-    updateAzimuthFSM();
-    
+    updateAzimuthFSM();   
     wdt_reset();
 }

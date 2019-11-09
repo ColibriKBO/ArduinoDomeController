@@ -34,7 +34,8 @@ void Controller::initState()
     if (digitalRead(swHomed))
         state = ST_HOMED;
     else if (!digitalRead(swHomed))
-        state = ST_NOTHOMED;
+        // state = ST_NOTHOMED;
+        state = ST_HOMED;
     else
         state = ST_ABORTED;
 }
@@ -69,9 +70,9 @@ void Controller::update()
         }
         break;
     case ST_HOMED:
-        if (action == DO_CCW) {
+        if (action == DO_CW) {
             t0 = millis();
-            state = ST_CCWING;
+            state = ST_CWING;
         } else if (action == DO_CCW) {
             t0 = millis();
             state = ST_CCWING;
@@ -79,6 +80,12 @@ void Controller::update()
         break;
     case ST_ABORTED:
     case ST_ERROR:
+          for (int i=0; i<3; i++) {
+            digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on (HIGH is the voltage level)
+            delay(200);                       // wait for a second
+            digitalWrite(LED_BUILTIN, LOW);    // turn the LED off by making the voltage LOW
+            delay(200);                       // wait for a second
+          } 
         if (action == DO_CW) {
             t0 = millis();
             state = ST_CWING;
@@ -88,6 +95,12 @@ void Controller::update()
         }
         break;
     case ST_CWING:
+          for (int i=0; i<1; i++) {
+            digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on (HIGH is the voltage level)
+            delay(200);                       // wait for a second
+            digitalWrite(LED_BUILTIN, LOW);    // turn the LED off by making the voltage LOW
+            delay(200);                       // wait for a second
+          } 
         motor->run(MOTOR_CW, SPEED);
         if (action == DO_ABORT || action == DO_CCW) {
             state = ST_ABORTED;
@@ -97,7 +110,7 @@ void Controller::update()
             motor->brake();
         }
         break;
-    case ST_CCWING:
+    case ST_CCWING: 
         motor->run(MOTOR_CCW, SPEED);
         if (action == DO_ABORT || action == DO_CW) {
             state = ST_ABORTED;
